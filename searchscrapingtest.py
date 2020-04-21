@@ -7,7 +7,7 @@ url = "https://en.wikipedia.org/wiki/List_of_guitar_manufacturers"
 response = requests.get(url).text
 soup = BeautifulSoup(response, 'html.parser')
 brand_link = {}
-results = soup.find('div', class_="mw-parser-output").find_all('li')
+results = soup.find('div', class_="div-col columns column-width").find_all('li')
 for brand in results:
     brand_name = brand.find('a').text
     brandURL = brand.find('a')['href']

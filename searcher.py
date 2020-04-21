@@ -7,39 +7,39 @@ CACHE_FILENAME = "cache.json"
 CACHE_DICT = {}
 
 class bass():
-    '''a crowdfunding project
+    '''a bass
 
     Instance Attributes
     -------------------
-    projectname: string
-        the name of a crowdfunding project
+    product_name: string
+        name of the bass
 
-    picURL: string
-        the url of the theme picture for the project
-
-    fundingstatus: string
-        the status of the crowdfunding project
-
-    description: string
-        a short description for the project
+    brand: string
+        url of the theme picture for the project
 
     category: string
-        the category of a project
+        category of the type of bass
     
-    currentfund: int
-        the amounts of money current funded
+    price: float
+        price of the bass
 
-    currency: string
-        the currency of the funds
+    styles: list
+        the styles available
 
-    percentage: s
-        the zip-code of a national site (e.g. '49931', '82190-0168')
+    description: string
+        a short description about the bass
 
-    owner: string
-        the name of the project owner
+    features: string
+        the special features of the bass
+
+    picURL: string
+        a link to the image of the bass
+
+    URL: string
+        the link to the product page
     '''
     
-    def __init__(self, product_name, brand, picURL, price, description, styles, category, features):
+    def __init__(self, product_name, brand, category, price, styles, description, features, picURL, URL):
         self.product_name = product_name
         self.picURL = picURL
         self.price = price
@@ -48,6 +48,42 @@ class bass():
         self.styles = styles
         self.category = category
         self.features = features
+        self.URL = URL
+
+    def info(self):
+        '''
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        ----------
+        a list of basic information of the bass
+        '''
+        return [self.product_name, self.brand, self.category, self.price, self.styles, self.description, self.features, self.picURL, self.URL]
+
+
+class brand():
+
+    def __init__(self, brand_name, brand_country, brand_description, URL):
+        self.brand_name = brand_name
+        self.brand_country = brand_country
+        self.brand_description = brand_description
+        self.URL = URL
+
+    def info(self):
+        '''Report a list of information
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        ----------
+        a list of basic information of a brand
+        '''
+        return [self.brand_name, self.brand_country, self.brand_description, self.URL]
 
 
 def create_db():
@@ -60,12 +96,13 @@ def create_db():
             'BassId' INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
             'ModelName' TEXT NOT NULL,
             'Brand' TEXT NOT NULL,
-            'PicURL' TEXT NOT NULL,
-            'Price' DECIMAL NOT NULL,
-            'Description' TEXT NOT NULL,
-            'Styles' TEXT NOT NULL,
             'Category' INTEGER NOT NULL,
-            'features' TEXT
+            'Price' DECIMAL NOT NULL,
+            'Styles' TEXT NOT NULL,
+            'Description' TEXT,
+            'Features' TEXT,
+            'PicURL' TEXT NOT NULL,
+            'URL' TEXT NOT NULL
         )
     '''
 
@@ -73,9 +110,9 @@ def create_db():
         CREATE TABLE IF NOT EXISTS "Brands" (
             "BrandId" INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
             "BrandName" TEXT NOT NULL,
-            "BrandDescription" TEXT,
             "BrandCountry" TEXT,
-            "BrandLink" TEXT
+            "BrandDescription" TEXT,
+            "URL" TEXT NOT NULL
         );
     '''
 
@@ -186,6 +223,7 @@ def get_basses():
     instance
         a project instance
     '''
+    baseurl = "https://www.guitarcenter.com"
     response = make_request_with_cache("https://www.guitarcenter.com/Bass.gc")
     soup = BeautifulSoup(response, 'html.parser')
     match = soup.find('div', class_='results-options--option -matches').var.text.replace(',','')
@@ -198,7 +236,7 @@ def get_basses():
         for product in results:
             product_name = product.find('div', class_='productTitle').text.strip()
             productURL = product.find('div', class_='productTitle').a['href']
-            bass_link[product_name] = productURL
+            bass_link[product_name] = baseurl + productURL
         
     return bass_link
 
@@ -218,27 +256,49 @@ def get_bass_instance(site_url):
     '''
     response = make_request_with_cache(site_url)
     soup = BeautifulSoup(response, 'html.parser')
-    product_name = soup.find('div', class_='titleWrap').text
-    brand = soup.find('div', class_='titleWrap').find('span', class_='brand').text
-    picURL = soup.find('div', class_='product-left').find('img')['src']
-    price = soup.find('span', class_='topAlignedPrice').text.strip().strip('$')
-    description = soup.find('section', id='product-overview').find('p', class_='description').text
-    styles = []
-    allstyles = soup.find('div', id='chooseStyleWrap').find_all('li')
-    for style in allstyles:
-        stylename = style.find('div', class_='styleLabel').text
-        styles.append(stylename)
-    if len(styles) < 1:
-        stylename = soup.find('div', class_='titleWrap').find('span', class_='skuStyle').text
-        styles.append(stylename)
-    category = soup.find_all('a', class_='category')[2].text
-    uls = soup.find('div', class_='specs').find_all('ul')
-    features = []
-    for ul in uls:
-        lis = ul.find_all('li')
-        for li in lis:
-            features.append(li.text.strip())
-    return bass(product_name, brand, picURL, price, description, styles, category, features)
+    if soup.find('div', class_='titleWrap') is None:
+        pass
+    else:
+        product_name = soup.find('div', class_='titleWrap').text.lstrip()
+        brand = soup.find('div', class_='titleWrap').find('span', class_='brand').text
+        picURL = soup.find('div', class_='product-left').find('img')['src']
+        try:
+            price = float(soup.find('span', class_='topAlignedPrice').text.strip().strip('$').replace(',', ''))
+        except:
+            price = '0'
+
+        try:
+            description = soup.find('section', id='product-overview').find('p', class_='description').text
+        except:
+            description = ''
+        
+        styleslist = []
+        styles = ''
+        allstyles = soup.find('div', id='chooseStyleWrap').find_all('li')
+        for style in allstyles:
+            stylename = style.find('div', class_='styleLabel').text
+            styleslist.append(stylename)
+        styles = ', '.join(styleslist)
+        if len(styleslist) < 1:
+            stylename = soup.find('div', class_='titleWrap').find('span', class_='skuStyle').text
+            styles = stylename
+        
+        try:
+            category = soup.find_all('a', class_='category')[2].text
+        except:
+            category = soup.find_all('a', class_='category')[1].text
+
+        try:
+            uls = soup.find('div', class_='specs').find_all('ul')
+            featureslist = []
+            for ul in uls:
+                lis = ul.find_all('li')
+                for li in lis:
+                    featureslist.append(li.text.strip())
+            features = ' \n '.join(featureslist)
+        except:
+            features = ''
+        return bass(product_name, brand, category, price, styles, description, features, picURL, site_url)
 
 
 def get_brands():
@@ -258,7 +318,7 @@ def get_brands():
     response = requests.get(url).text
     soup = BeautifulSoup(response, 'html.parser')
     brand_link = {}
-    results = soup.find('div', class_="mw-parser-output").find_all('li')
+    results = soup.find('div', class_="div-col columns column-width").find_all('li')
     for brand in results:
         brand_name = brand.find('a').text
         brandURL = brand.find('a')['href']
@@ -266,11 +326,83 @@ def get_brands():
     return brand_link
 
 
+def get_brands_instance(brandname, site_url):
+    '''Make an instances from a national site URL.
+    
+    Parameters
+    ----------
+    site_url: string
+        The URL for a project page in indiegogo
+    
+    Returns
+    -------
+    instance
+        a project instance
+    '''
+    response = make_request_with_cache(site_url)
+    soup = BeautifulSoup(response, 'html.parser')
+    try:
+        infobox = soup.find('table', class_='infobox vcard').find_all('tr')
+        info_dict = {}
+        website = ""
+        country = ""
+        for info in infobox:
+            try:
+                info_dict[info.find('th').text.lower()] = info.find('td')
+            except:
+                pass
+        if 'headquarters' in info_dict.keys():
+            country = info_dict['headquarters'].find('div', class_='country-name').text
+        elif 'country' in info_dict.keys():
+            country = info_dict['country'].text
+        if 'website' in info_dict.keys():
+            website = info_dict['website'].a['href']
+        else:
+            website = site_url
+    except:
+        website = site_url
+        country = ""
+
+    row_description = soup.find('div', id='mw-content-text').find('div', class_='mw-parser-output').find_all('p')
+    if 'coordinates' in str(row_description[0]):
+        description = row_description[1].text
+    else:
+        description = row_description[0].text
+    
+    return brand(brandname, country, description, website)
+
+
+def save_to_basses(bass):
+    conn = sqlite3.connect('bassdb.sqlite')
+    cur = conn.cursor()
+    insert_basses = '''
+    INSERT INTO Basses
+    VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    '''
+    cur.execute(insert_basses, bass)
+    conn.commit()
+
+
+def save_to_brands(brand):
+    conn = sqlite3.connect('bassdb.sqlite')
+    cur = conn.cursor()
+    insert_brands = '''
+    INSERT INTO Brands
+    VALUES (NULL, ?, ?, ?, ?)
+    '''
+    cur.execute(insert_brands, brand)
+    conn.commit()    
+
+
 if __name__ == "__main__":
+    create_db()
     CACHE_DICT = open_cache()
     bass_url_dict = get_basses()
-    get_move = input('Enter a search keywords, or "exit" \n: ')
-    if get_move.lower() == "exit":
-        print("Bye")
-    elif get_move.lower() in bass_url_dict.keys():
-        print("hi!")
+    brand_url_dict = get_brands()
+    for keys,values in brand_url_dict.items():
+        save_to_brands(get_brands_instance(keys, values).info())
+    for keys,values in bass_url_dict.items():
+        try:
+            save_to_basses(get_bass_instance(values).info())
+        except:
+            pass
