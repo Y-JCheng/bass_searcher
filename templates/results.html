@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <meta charset="utf8" />
+    <title>Bass Searcher | {% if strings %} {{strings}} {% endif %} {% if basstype!="Bass" %}{{basstype}} {% endif %}
+        {% if basstype=="Bass" %}All{% endif %} Basses</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/style.css') }}">
+</head>
+
+<body>
+    <div class="container"></div>
+    <div class="bodybox">
+        <h1><a href="/">Bass Searcher</a> | <a href="/brands">Bass Brands</a></h1>
+        {% if not keywords %}
+        <h2>You are looking at {% if strings %} {{strings}} {% endif %} {% if basstype!="Bass" %}{{basstype}}
+            {% endif %} {% if basstype=="Bass" %}All{% endif %} Basses</h2>
+        {% endif %}
+        {% if keywords %}
+        <h2>You are searching {% if strings %} {{strings}} {% endif %} {% if basstype!="Bass" %}{{basstype}} {% endif %}
+            {% if basstype=="Bass" %}All{% endif %} Basses with "{{keywords}}"</h2>
+        {% endif %}
+
+        <div class="resultsbox">
+            <h3>{{len}} results</h3>
+            {%for i in range(0, len)%}
+            <div class="bassbox">
+                <h2>{{Basses[i][0]}}</h2>
+                <h3>{{Basses[i][1]}}</h3>
+                <img class="bassimg" src={{Basses[i][6]}}>
+                <h3>Styles available: {{Basses[i][3]}}</h3>
+                <a href="#description{{i}}" class="btn btn-info" data-toggle="collapse">Read more...</a>
+                <div id="description{{i}}" class="collapse">
+                    <p class="description">{{Basses[i][4]}}</p>
+                    {% if Basses[i][5] != None %}
+                    <p>Features: {{Basses[i][5]}}</p>
+                    {% endif %}
+                </div><br><br>
+                <a href={{Basses[i][7]}}>
+                    <div class="btn btn-warning">
+                        <h3>$ {{Basses[i][2]}}</h3>
+                        <h3>Go get it!</h3>
+                    </div>
+                </a>
+            </div>
+            {%endfor%}
+        </div>
+    </div>
+</body>
+
+</html>

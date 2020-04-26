@@ -2,9 +2,13 @@ from bs4 import BeautifulSoup
 import requests
 import json
 import sqlite3
+import plotly
+import plotly.graph_objects as go
+from flask import Flask, render_template, request
 
 CACHE_FILENAME = "cache.json"
 CACHE_DICT = {}
+app = Flask(__name__)
 
 class bass():
     '''a bass
@@ -39,12 +43,13 @@ class bass():
         the link to the product page
     '''
     
-    def __init__(self, product_name, brand, category, price, styles, description, features, picURL, URL):
+    def __init__(self, product_name, brand, other_brand, category, price, styles, description, features, picURL, URL):
         self.product_name = product_name
         self.picURL = picURL
         self.price = price
         self.description = description
         self.brand = brand
+        self.other_brand = other_brand
         self.styles = styles
         self.category = category
         self.features = features
@@ -61,7 +66,7 @@ class bass():
         ----------
         a list of basic information of the bass
         '''
-        return [self.product_name, self.brand, self.category, self.price, self.styles, self.description, self.features, self.picURL, self.URL]
+        return [self.product_name, self.brand, self.other_brand, self.category, self.price, self.styles, self.description, self.features, self.picURL, self.URL]
 
 
 class brand():
@@ -95,9 +100,10 @@ def create_db():
         CREATE TABLE IF NOT EXISTS "Basses" (
             'BassId' INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
             'ModelName' TEXT NOT NULL,
-            'Brand' TEXT NOT NULL,
+            'Brand' INTEGER NOT NULL,
+            'OtherBrand' TEXT,
             'Category' INTEGER NOT NULL,
-            'Price' DECIMAL NOT NULL,
+            'Price' DECIMAL,
             'Styles' TEXT NOT NULL,
             'Description' TEXT,
             'Features' TEXT,
@@ -192,7 +198,7 @@ def make_request_with_cache(url):
     baseurl: string
         The URL for the API endpoint
     hashtag: string
-        The hashtag to search (i.e. “#2020election”)
+        The hashtag to search
     count: int
         The number of tweets to retrieve
     
@@ -260,17 +266,20 @@ def get_bass_instance(site_url):
         pass
     else:
         product_name = soup.find('div', class_='titleWrap').text.lstrip()
-        brand = soup.find('div', class_='titleWrap').find('span', class_='brand').text
+        brandname = soup.find('div', class_='titleWrap').find('span', class_='brand').text
+        brand_and_other = change_brandname_into_number(brandname)
+        brand = brand_and_other[0]
+        other_brand = brand_and_other[1]
         picURL = soup.find('div', class_='product-left').find('img')['src']
         try:
             price = float(soup.find('span', class_='topAlignedPrice').text.strip().strip('$').replace(',', ''))
         except:
-            price = '0'
+            price = None
 
         try:
             description = soup.find('section', id='product-overview').find('p', class_='description').text
         except:
-            description = ''
+            description = None
         
         styleslist = []
         styles = ''
@@ -297,8 +306,26 @@ def get_bass_instance(site_url):
                     featureslist.append(li.text.strip())
             features = ' \n '.join(featureslist)
         except:
-            features = ''
-        return bass(product_name, brand, category, price, styles, description, features, picURL, site_url)
+            features = None
+        return bass(product_name, brand, other_brand, category, price, styles, description, features, picURL, site_url)
+
+
+def change_brandname_into_number(brandname):
+    conn = sqlite3.connect('bassdb.sqlite')
+    cur = conn.cursor()
+    read_brand_db='''
+    SELECT BrandId, BrandName
+    FROM brands
+    '''
+    brandlist = cur.execute(read_brand_db)
+    for brand in brandlist:
+        if brand[1].lower() in brandname.lower():
+            brandcode = brand[0]
+    conn.close()
+    try:
+        return (int(brandcode), None)
+    except:
+        return (0, brandname)
 
 
 def get_brands():
@@ -353,15 +380,19 @@ def get_brands_instance(brandname, site_url):
                 pass
         if 'headquarters' in info_dict.keys():
             country = info_dict['headquarters'].find('div', class_='country-name').text
+            if country is not None:
+                country = country.strip(',').strip('.').strip()
         elif 'country' in info_dict.keys():
             country = info_dict['country'].text
+            if country is not None:
+                country = country.strip(',').strip('.').strip()
         if 'website' in info_dict.keys():
             website = info_dict['website'].a['href']
         else:
             website = site_url
     except:
         website = site_url
-        country = ""
+        country = None
 
     row_description = soup.find('div', id='mw-content-text').find('div', class_='mw-parser-output').find_all('p')
     if 'coordinates' in str(row_description[0]):
@@ -377,7 +408,7 @@ def save_to_basses(bass):
     cur = conn.cursor()
     insert_basses = '''
     INSERT INTO Basses
-    VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     '''
     cur.execute(insert_basses, bass)
     conn.commit()
@@ -394,15 +425,183 @@ def save_to_brands(brand):
     conn.commit()    
 
 
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
+@app.route('/handle_form', methods=['POST'])
+def handle_the_form():
+    try:
+        keywords = request.form["keyword"]
+    except:
+        keywords = None
+    basstype = request.form["basstype"]
+    try:
+        lowestprice = request.form["lowestprice"]
+    except:
+        lowestprice = None
+    try:
+        highestprice = request.form["highestprice"]
+    except:
+        highestprice = None
+    try:
+        strings = request.form["strings"]
+    except:
+        strings = None
+    allbasses = return_results(keywords, basstype, lowestprice, highestprice, strings)
+    return render_template('results.html', 
+    keywords = keywords,
+    basstype = basstype,
+    strings = strings,
+    len = len(allbasses),
+    Basses = allbasses
+    )
+
+
+@app.route('/brands')
+def brands():
+    allbrands = return_brands()
+    return render_template('Allbrands.html', 
+    len = len(allbrands),
+    Brands = allbrands
+    )
+
+
+@app.route('/brandanalysis')
+def brandanalysis():
+    brands_country_dict = brands_country_analysis()
+    countries = []
+    counts = []
+    for key,value in brands_country_dict.items():
+        countries.append(key)
+        counts.append(value)
+    data = [go.Pie(labels=countries, values=counts, hole=.3)]
+    graphJSON = json.dumps(data, cls=plotly.utils.PlotlyJSONEncoder)
+    return render_template('brandanalysis.html', plot=graphJSON)
+
+
+def generate_query(keywords, basstype, lowestprice, highestprice, strings):
+    query_bass = '''
+    SELECT ModelName, IFNULL(Brands.BrandName, OtherBrand), Price, Styles, Description, Features, PicURL, Basses.URL, Brands.BrandCountry
+    FROM Basses
+    LEFT OUTER JOIN Brands 
+	ON Basses.Brand = Brands.BrandId
+    '''
+    querylist = []
+    if len(keywords)>0:
+        keywordquery = '(ModelName LIKE "%' + keywords + '%" OR Brands.BrandName LIKE "%' + keywords + '%" OR OtherBrand LIKE "%' + keywords + '%" OR Styles LIKE "%' + keywords + '%" OR Description LIKE "%' + keywords + '%" OR Features LIKE "%' + keywords + '%")'
+        querylist.append(keywordquery)
+    if len(basstype)>0:
+        querylist.append('Category LIKE "%' + basstype + '%"')
+    if len(lowestprice)>0:
+        querylist.append('Price >=' + str(lowestprice))
+    if len(highestprice)>0:
+        querylist.append('Price <=' + str(highestprice))
+    if strings is not None:
+        if len(strings)>0:
+            querylist.append('Category LIKE "%' + strings + '%"')
+    
+    if len(querylist)>0:
+        i = 0
+        for query in querylist:
+            if i == 0:
+                query_bass = query_bass + " WHERE " + query
+                i += 1
+            else:
+                query_bass = query_bass + " AND " + query
+    return query_bass
+
+
+def return_results(keywords, basstype, lowestprice, highestprice, strings):
+    conn = sqlite3.connect('bassdb.sqlite')
+    cur = conn.cursor()
+    query = generate_query(keywords, basstype, lowestprice, highestprice, strings)
+    results = cur.execute(query)
+    conn.commit()
+    result_list=[]
+    for basses in results:
+        result_list.append(basses)
+    return result_list
+
+
+def return_brands():
+    conn = sqlite3.connect('bassdb.sqlite')
+    cur = conn.cursor()
+    query = '''
+    SELECT BrandName, BrandCountry, BrandDescription, URL
+    FROM Brands
+    '''
+    results = cur.execute(query)
+    conn.commit()
+    result_list=[]
+    for brands in results:
+        result_list.append(brands)
+    return result_list
+
+def return_brand_countries():
+    conn = sqlite3.connect('bassdb.sqlite')
+    cur = conn.cursor()
+    query = '''
+    SELECT DISTINCT Brands.BrandCountry
+    FROM Brands
+    '''
+    results = cur.execute(query)
+    conn.commit()
+    result_list=[]
+    for country in results:
+        result_list.append(country[0])
+    return dict.fromkeys(result_list)
+
+
+def brands_country_analysis():
+    allbrands = return_brands()
+    US_list = ["United States of America", "US", "USA", "American"]
+    UK_list = ["England", "UK"]
+    country_dict = return_brand_countries()
+
+    for brand in allbrands:
+        if brand[1] in country_dict.keys():
+            if country_dict[brand[1]] is None:
+                country_dict[brand[1]] = 0
+            else:
+                country_dict[brand[1]] = country_dict[brand[1]] + 1
+    combinelist = []
+    for key,value in country_dict.items():
+        if key in US_list:
+            country_dict["United States"] += value
+            combinelist.append(key)
+        if key in UK_list:
+            country_dict["United Kingdom"] += value
+            combinelist.append(key)
+        if key is None:
+            country_dict[""] += value
+            combinelist.append(key)
+    print(country_dict)
+    for combined in combinelist:
+        del country_dict[combined]
+    country_dict["N/A"] = country_dict[""]
+    del country_dict[""]
+    blanklist = []
+    for key,value in country_dict.items():
+        if value == 0:
+            blanklist.append(key)
+    for blank in blanklist:
+        del country_dict[blank]
+    return country_dict
+
+
 if __name__ == "__main__":
-    create_db()
-    CACHE_DICT = open_cache()
-    bass_url_dict = get_basses()
-    brand_url_dict = get_brands()
-    for keys,values in brand_url_dict.items():
-        save_to_brands(get_brands_instance(keys, values).info())
-    for keys,values in bass_url_dict.items():
-        try:
-            save_to_basses(get_bass_instance(values).info())
-        except:
-            pass
+    # create_db()
+    # CACHE_DICT = open_cache()
+    # bass_url_dict = get_basses()
+    # brand_url_dict = get_brands()
+    # for keys,values in brand_url_dict.items():
+    #     save_to_brands(get_brands_instance(keys, values).info())
+    # for keys,values in bass_url_dict.items():
+    #     try:
+    #         save_to_basses(get_bass_instance(values).info())
+    #     except:
+    #         pass
+    app.run(debug=True)
+
