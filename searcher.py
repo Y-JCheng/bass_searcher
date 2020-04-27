@@ -13,37 +13,41 @@ CACHE_DICT = {}
 API_KEY = APIkey.YOUTUBE_API_KEY
 app = Flask(__name__)
 
+# The first two parts are used to define classes for basses and brands when scrapping
 class bass():
-    '''a bass
+    '''A bass
 
     Instance Attributes
     -------------------
-    product_name: string
-        name of the bass
+    product_name: string 
+        Name of the bass
 
-    brand: string
-        url of the theme picture for the project
+    brand: int
+        The brand's id of the bass
+
+    other_brand: string
+        The brand's name of the bass if the brand is not in the brands list
 
     category: string
-        category of the type of bass
+        The type of the bass
     
     price: float
-        price of the bass
+        The price of the bass
 
     styles: list
-        the styles available
+        The styles of the bass
 
     description: string
-        a short description about the bass
+        A short description about bass
 
     features: string
-        the special features of the bass
+        The special features of the bass
 
     picURL: string
-        a link to the image of the bass
+        A link to the image of the bass
 
     URL: string
-        the link to the product page
+        A link to the product page
     '''
     
     def __init__(self, product_name, brand, other_brand, category, price, styles, description, features, picURL, URL):
@@ -59,7 +63,7 @@ class bass():
         self.URL = URL
 
     def info(self):
-        '''
+        '''Report a list of basic information of the bass
 
         Parameters
         ----------
@@ -67,12 +71,28 @@ class bass():
 
         Returns
         ----------
-        a list of basic information of the bass
+        A list of basic information of the bass
         '''
         return [self.product_name, self.brand, self.other_brand, self.category, self.price, self.styles, self.description, self.features, self.picURL, self.URL]
 
 
 class brand():
+    '''A bass brand
+
+    Instance Attributes
+    -------------------
+    brand_name: string 
+        The name of the brand
+
+    brand_country: string 
+        The country where the brand headquaters in
+
+    brand_description: string
+        A short description about the brand
+
+    URL: string
+        A link to the official website of the brand. If not available, a link to the Wikipedia page of the brand
+    '''
 
     def __init__(self, brand_name, brand_country, brand_description, URL):
         self.brand_name = brand_name
@@ -81,7 +101,7 @@ class brand():
         self.URL = URL
 
     def info(self):
-        '''Report a list of information
+        '''Report a list of information of a brand
 
         Parameters
         ----------
@@ -89,53 +109,14 @@ class brand():
 
         Returns
         ----------
-        a list of basic information of a brand
+        A list of basic information of a brand
         '''
         return [self.brand_name, self.brand_country, self.brand_description, self.URL]
 
 
-def create_db():
-    conn = sqlite3.connect('bassdb.sqlite')
-    cur = conn.cursor()
-    drop_basses = 'DROP TABLE IF EXISTS "Basses"'
-    drop_brands = 'DROP TABLE IF EXISTS "Brands"'
-    create_basses = '''
-        CREATE TABLE IF NOT EXISTS "Basses" (
-            'BassId' INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
-            'ModelName' TEXT NOT NULL,
-            'Brand' INTEGER NOT NULL,
-            'OtherBrand' TEXT,
-            'Category' INTEGER NOT NULL,
-            'Price' DECIMAL,
-            'Styles' TEXT NOT NULL,
-            'Description' TEXT,
-            'Features' TEXT,
-            'PicURL' TEXT NOT NULL,
-            'URL' TEXT NOT NULL
-        )
-    '''
-
-    create_brands = '''
-        CREATE TABLE IF NOT EXISTS "Brands" (
-            "BrandId" INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
-            "BrandName" TEXT NOT NULL,
-            "BrandCountry" TEXT,
-            "BrandDescription" TEXT,
-            "URL" TEXT NOT NULL
-        );
-    '''
-
-    cur.execute(drop_basses)
-    cur.execute(drop_brands)
-    cur.execute(create_basses)
-    cur.execute(create_brands)
-    conn.commit()
-    conn.close()
-
-
+# Functions in this part work on the caching
 def open_cache():
-    ''' Opens the cache file if it exists and loads the JSON into
-    the CACHE_DICT dictionary.
+    ''' Opens the cache file if it exists and loads the JSON into the CACHE_DICT dictionary.
     if the cache file doesn't exist, creates a new cache dictionary
     
     Parameters
@@ -173,14 +154,14 @@ def save_cache(cache_dict):
     fw.write(dumped_json_cache)
     fw.close() 
 
-
+# Functions in this part work on web scrapping 
 def make_request(url):
-    '''Make a request to the Web using the baseurl and params
+    '''Make a request to the Web using the url
     
     Parameters
     ----------
     url: string
-        The URL for the API endpoint
+        The URL for the API/scrapping endpoint
     
     Returns
     -------
@@ -195,18 +176,12 @@ def make_request(url):
 
 
 def make_request_with_cache(url):
-    '''Check the cache for a saved result for this baseurl+params:values
-    combo. If the result is found, return it. Otherwise send a new 
-    request, save it, then return it.
+    '''Check the cache for a saved result for this url. If the result is found, return it. Otherwise send a new request, save it, then return it.
     
     Parameters
     ----------
-    baseurl: string
+    url: string
         The URL for the API endpoint
-    hashtag: string
-        The hashtag to search
-    count: int
-        The number of tweets to retrieve
     
     Returns
     -------
@@ -224,7 +199,7 @@ def make_request_with_cache(url):
 
 
 def get_basses():
-    '''Get a list of 
+    '''Get the name and the URL of all basses from Guitar Center online shop
     
     Parameters
     ----------
@@ -232,8 +207,8 @@ def get_basses():
     
     Returns
     -------
-    instance
-        a project instance
+    dict
+        A dictionary having names of the basss as keys, and url of the product page as values
     '''
     baseurl = "https://www.guitarcenter.com"
     response = make_request_with_cache("https://www.guitarcenter.com/Bass.gc")
@@ -254,17 +229,17 @@ def get_basses():
 
 
 def get_bass_instance(site_url):
-    '''Make an instances from a national site URL.
+    '''Make an instances from a Guitar Center product page.
     
     Parameters
     ----------
     site_url: string
-        The URL for a project page in indiegogo
+        The URL for a product page in Guitar Center
     
     Returns
     -------
     instance
-        a project instance
+        a bass instance
     '''
     response = make_request_with_cache(site_url)
     soup = BeautifulSoup(response, 'html.parser')
@@ -317,6 +292,18 @@ def get_bass_instance(site_url):
 
 
 def change_brandname_into_number(brandname):
+    '''Change the brand name into id.
+    
+    Parameters
+    ----------
+    brandname: string
+        The name of the brand
+    
+    Returns
+    -------
+    int or string
+        The id of the brand, return the original brandname if the id is not available
+    '''
     conn = sqlite3.connect('bassdb.sqlite')
     cur = conn.cursor()
     read_brand_db='''
@@ -335,6 +322,18 @@ def change_brandname_into_number(brandname):
 
 
 def get_youtube_video_url(bassname):
+    '''Get the youtube video URL for the bass
+    
+    Parameters
+    ----------
+    bassname: string
+        The name of the bass
+    
+    Returns
+    -------
+    string or None
+        URL of the youtube page. return None if there is no result.
+    '''
     base_url = "https://www.googleapis.com/youtube/v3/search?"
     bassname = "%20".join(bassname.split(" "))
     query = str(base_url + "part=snippet&maxResults=1&q=" + bassname + "&key=" + API_KEY)
@@ -347,7 +346,7 @@ def get_youtube_video_url(bassname):
 
 
 def get_brands():
-    '''Get a list of 
+    '''Get the name and the URL of all brands from Wikipedia "List of Guitar Manufacturers" page.
     
     Parameters
     ----------
@@ -355,8 +354,8 @@ def get_brands():
     
     Returns
     -------
-    instance
-        a project instance
+    dict
+        A dictionary having names of the brands as keys, and url of the Wikipedia page as values
     '''
     baseurl = "https://en.wikipedia.org"
     url = "https://en.wikipedia.org/wiki/List_of_guitar_manufacturers"
@@ -372,17 +371,17 @@ def get_brands():
 
 
 def get_brands_instance(brandname, site_url):
-    '''Make an instances from a national site URL.
+    '''Make an instances from a Wikipedia page.
     
     Parameters
     ----------
     site_url: string
-        The URL for a project page in indiegogo
+        The URL for a product page in WikiPedia
     
     Returns
     -------
     instance
-        a project instance
+        a brand instance
     '''
     response = make_request_with_cache(site_url)
     soup = BeautifulSoup(response, 'html.parser')
@@ -421,7 +420,69 @@ def get_brands_instance(brandname, site_url):
     return brand(brandname, country, description, website)
 
 
+# Functions in this part work with the database
+def create_db():
+    '''Create the databases for basses and brands
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    ----------
+    None
+    '''
+
+    conn = sqlite3.connect('bassdb.sqlite')
+    cur = conn.cursor()
+    drop_basses = 'DROP TABLE IF EXISTS "Basses"'
+    drop_brands = 'DROP TABLE IF EXISTS "Brands"'
+    create_basses = '''
+        CREATE TABLE IF NOT EXISTS "Basses" (
+            'BassId' INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
+            'ModelName' TEXT NOT NULL,
+            'Brand' INTEGER NOT NULL,
+            'OtherBrand' TEXT,
+            'Category' INTEGER NOT NULL,
+            'Price' DECIMAL,
+            'Styles' TEXT NOT NULL,
+            'Description' TEXT,
+            'Features' TEXT,
+            'PicURL' TEXT NOT NULL,
+            'URL' TEXT NOT NULL
+        )
+    '''
+
+    create_brands = '''
+        CREATE TABLE IF NOT EXISTS "Brands" (
+            "BrandId" INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
+            "BrandName" TEXT NOT NULL,
+            "BrandCountry" TEXT,
+            "BrandDescription" TEXT,
+            "URL" TEXT NOT NULL
+        );
+    '''
+
+    cur.execute(drop_basses)
+    cur.execute(drop_brands)
+    cur.execute(create_basses)
+    cur.execute(create_brands)
+    conn.commit()
+    conn.close()
+
+
 def save_to_basses(bass):
+    '''Save the bass to database.
+    
+    Parameters
+    ----------
+    bass: instance
+        A bass instance contains all the data to be stored
+    
+    Returns
+    -------
+    None
+    '''
     conn = sqlite3.connect('bassdb.sqlite')
     cur = conn.cursor()
     insert_basses = '''
@@ -433,6 +494,17 @@ def save_to_basses(bass):
 
 
 def save_to_brands(brand):
+    '''Save the brand to database.
+    
+    Parameters
+    ----------
+    brand: instance
+        A brand instance contains all the data to be stored
+    
+    Returns
+    -------
+    None
+    '''
     conn = sqlite3.connect('bassdb.sqlite')
     cur = conn.cursor()
     insert_brands = '''
@@ -442,14 +514,36 @@ def save_to_brands(brand):
     cur.execute(insert_brands, brand)
     conn.commit()    
 
-
+# Functions in this part are for generating the inerface
 @app.route('/')
 def index():
+    '''Generate the mainpage of my applicaiton.
+    
+    Parameters
+    ----------
+    None
+    
+    Returns
+    -------
+    webpage
+        the mainpage.
+    '''
     return render_template('index.html')
 
 
 @app.route('/handle_form', methods=['POST'])
 def handle_the_form():
+    '''Generate the results page when the search is sent.
+    
+    Parameters
+    ----------
+    None
+    
+    Returns
+    -------
+    webpage
+        the results page.
+    '''
     try:
         keywords = request.form["keyword"]
     except:
@@ -479,6 +573,17 @@ def handle_the_form():
 
 @app.route('/seevideo', methods=['POST'])
 def video_page():
+    '''Generate the video page.
+    
+    Parameters
+    ----------
+    None
+    
+    Returns
+    -------
+    webpage
+        the video page.
+    '''
     bassname = request.form["bassname"]
     bassdata = find_a_bass(bassname)
     youtubelink = get_youtube_video_url(bassname)
@@ -490,6 +595,17 @@ def video_page():
 
 @app.route('/brands')
 def brands():
+    '''Generate the brands page.
+    
+    Parameters
+    ----------
+    None
+    
+    Returns
+    -------
+    webpage
+        the brands page.
+    '''
     allbrands = return_brands()
     return render_template('Allbrands.html', 
     len = len(allbrands),
@@ -499,6 +615,17 @@ def brands():
 
 @app.route('/brandanalysis')
 def brandanalysis():
+    '''Generate the brands analysis page.
+    
+    Parameters
+    ----------
+    None
+    
+    Returns
+    -------
+    webpage
+        the brands analysis page.
+    '''
     brands_country_dict = brands_country_analysis()
     countries = []
     counts = []
@@ -530,8 +657,32 @@ def brandanalysis():
 
     return render_template('brandanalysis.html', plot=graphJSON, plot2=graphJSON2, plot3=graphJSON3)
 
-
+# Functions below are for analyzing purpose
 def generate_query(keywords, basstype, lowestprice, highestprice, strings):
+    '''Generate a query to search with the basses table.
+    
+    Parameters
+    ----------
+    keywords: string
+        A keyword used to do a cross field search
+
+    basstype: string
+        The type of the bass
+
+    lowestprice: string
+        The lowest price of the basses that users would like to search for
+
+    highestprice: string
+        The highest price of the basses that users would like to search for
+    
+    strings: string
+        The number of the bass string
+    
+    Returns
+    -------
+    string
+        A SQL query used to search with basses table
+    '''
     query_bass = '''
     SELECT ModelName, IFNULL(Brands.BrandName, OtherBrand), Price, Styles, Description, Features, PicURL, Basses.URL, Brands.BrandCountry
     FROM Basses
@@ -564,6 +715,30 @@ def generate_query(keywords, basstype, lowestprice, highestprice, strings):
 
 
 def return_results(keywords, basstype, lowestprice, highestprice, strings):
+    '''Get the basses that meet the provided criteria
+    
+    Parameters
+    ----------
+    keywords: string
+        A keyword used to do a cross field search
+
+    basstype: string
+        The type of the bass
+
+    lowestprice: string
+        The lowest price of the basses that users would like to search for
+
+    highestprice: string
+        The highest price of the basses that users would like to search for
+    
+    strings: string
+        The number of the bass string
+    
+    Returns
+    -------
+    list
+        A list of basses that meet the provided criteria
+    '''
     conn = sqlite3.connect('bassdb.sqlite')
     cur = conn.cursor()
     query = generate_query(keywords, basstype, lowestprice, highestprice, strings)
@@ -576,6 +751,18 @@ def return_results(keywords, basstype, lowestprice, highestprice, strings):
 
 
 def find_a_bass(bassname):
+    '''Get a bass with it's name
+    
+    Parameters
+    ----------
+    bassname: string
+        Name of the bass
+    
+    Returns
+    -------
+    list
+        A list of data for the bass
+    '''
     conn = sqlite3.connect('bassdb.sqlite')
     cur = conn.cursor()
     querybase = '''
@@ -592,6 +779,17 @@ def find_a_bass(bassname):
 
 
 def return_brands():
+    '''Get all of the brands in brands table
+    
+    Parameters
+    ----------
+    None
+    
+    Returns
+    -------
+    list
+        A list of brands
+    '''
     conn = sqlite3.connect('bassdb.sqlite')
     cur = conn.cursor()
     query = '''
@@ -607,6 +805,17 @@ def return_brands():
 
 
 def return_brand_countries():
+    '''Get all of the countries the brands bassed
+    
+    Parameters
+    ----------
+    None
+    
+    Returns
+    -------
+    dict
+        A dictionary with the countries as keys, and all values is None
+    '''
     conn = sqlite3.connect('bassdb.sqlite')
     cur = conn.cursor()
     query = '''
@@ -622,6 +831,17 @@ def return_brand_countries():
 
 
 def return_bass_brands():
+    '''Get all of the brands who have their basses selling in Guitar Center
+    
+    Parameters
+    ----------
+    None
+    
+    Returns
+    -------
+    dict
+        A dictionary with the brands as keys, and all values is None
+    '''
     conn = sqlite3.connect('bassdb.sqlite')
     cur = conn.cursor()
     query = '''
@@ -639,6 +859,17 @@ def return_bass_brands():
 
 
 def brands_country_analysis():
+    '''Analyze through how many bass brands are in each countries
+    
+    Parameters
+    ----------
+    None
+    
+    Returns
+    -------
+    dict
+        A dictionary with countries as keys, and the number of the brands headquartered in the country as values
+    '''
     allbrands = return_brands()
     US_list = ["United States of America", "US", "USA", "American"]
     UK_list = ["England", "UK"]
@@ -661,7 +892,6 @@ def brands_country_analysis():
         if key is None:
             country_dict[""] += value
             combinelist.append(key)
-    print(country_dict)
     for combined in combinelist:
         del country_dict[combined]
     country_dict["N/A"] = country_dict[""]
@@ -676,6 +906,17 @@ def brands_country_analysis():
 
 
 def bass_by_brands():
+    '''Analyze through how many bass in the online store are made by each brands
+    
+    Parameters
+    ----------
+    None
+    
+    Returns
+    -------
+    dict
+        A dictionary with brands as keys, and the number of the basses in the online store as values. Sorted by the number of the basses
+    '''
     allbasses = return_results("", "", "", "", "")
     brand_dict = return_bass_brands()
     for bass in allbasses:
@@ -692,18 +933,27 @@ def bass_by_brands():
         del brand_dict[blank]
     brand_dict = sorted(brand_dict.items(), key=lambda kv: kv[1], reverse=True)
     brand_dict = collections.OrderedDict(brand_dict)
-    print(brand_dict)
     return brand_dict
 
 
 def bass_by_price():
+    '''List out all the basses with its brand and price, and sorted with the price.
+    
+    Parameters
+    ----------
+    None
+    
+    Returns
+    -------
+    dict
+        A dictionary with basses as keys, and a list of brand and price as values
+    '''
     allbasses = return_results("", "", "1", "", "")
     bass_dict = {}
     for bass in allbasses:
         bass_dict[bass[0]] = [bass[1], bass[2]]
     bass_dict = sorted(bass_dict.items(), key=lambda kv: kv[1][1])
     bass_dict = collections.OrderedDict(bass_dict)
-    print(bass_dict)
     return bass_dict
 
 
