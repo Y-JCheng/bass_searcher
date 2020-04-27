@@ -12,6 +12,7 @@ Installing Instructions
 5. Open your browser and type in http://127.0.0.1:5000/ in the address bar.
 6. You are good to go!
 
+
 Features - Bass Searcher
 ------------------------
 1. You can do a quick search or add on any criteria in the advenced search.
@@ -19,11 +20,13 @@ Features - Bass Searcher
 3. You can click on the "See video" to check the sound of the bass with a Youtube video.
 4. If you want to buy it, click on the big orange button to go to the product page.
 
+
 Features - Bass Brands
 ----------------------
 1. You can check on all the brands in the Bass Brands page
 2. "Learn more" buttons lead you to the official site of the brands. If the official site is not available, it lead you to Wikipedia page for the brand.
 3. You can click on "See Analysis" button to see several charts about the bass industry
+
 
 Required Python Packages
 ------------------------
