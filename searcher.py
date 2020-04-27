@@ -958,6 +958,7 @@ def bass_by_price():
 
 
 if __name__ == "__main__":
+# UNCOMMENT THE PART BELOW TO GET THE UPDATED BASS AND BRAND INFORMATION
     # create_db()
     # CACHE_DICT = open_cache()
     # bass_url_dict = get_basses()
