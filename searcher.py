@@ -2,12 +2,15 @@ from bs4 import BeautifulSoup
 import requests
 import json
 import sqlite3
+import collections
 import plotly
 import plotly.graph_objects as go
 from flask import Flask, render_template, request
+import APIkey
 
 CACHE_FILENAME = "cache.json"
 CACHE_DICT = {}
+API_KEY = APIkey.YOUTUBE_API_KEY
 app = Flask(__name__)
 
 class bass():
@@ -184,7 +187,10 @@ def make_request(url):
     dict
         the data returned from making the request in the form of a dictionary
     '''
-    response = requests.get(url).text
+    if "https://www.googleapis.com/youtube/v3/search" in url:
+        response = requests.get(url).json()
+    else:
+        response = requests.get(url).text
     return response
 
 
@@ -328,6 +334,18 @@ def change_brandname_into_number(brandname):
         return (0, brandname)
 
 
+def get_youtube_video_url(bassname):
+    base_url = "https://www.googleapis.com/youtube/v3/search?"
+    bassname = "%20".join(bassname.split(" "))
+    query = str(base_url + "part=snippet&maxResults=1&q=" + bassname + "&key=" + API_KEY)
+    response = make_request_with_cache(query)
+    print(response)
+    try:
+        finalreturns = str(response['items'][0]['id']['videoId'])
+    except: finalreturns = None
+    return finalreturns
+
+
 def get_brands():
     '''Get a list of 
     
@@ -459,6 +477,17 @@ def handle_the_form():
     )
 
 
+@app.route('/seevideo', methods=['POST'])
+def video_page():
+    bassname = request.form["bassname"]
+    bassdata = find_a_bass(bassname)
+    youtubelink = get_youtube_video_url(bassname)
+    return render_template('seevideo.html',
+    bassname = bassname,
+    youtubelink = youtubelink,
+    bassdata = bassdata)
+
+
 @app.route('/brands')
 def brands():
     allbrands = return_brands()
@@ -478,7 +507,28 @@ def brandanalysis():
         counts.append(value)
     data = [go.Pie(labels=countries, values=counts, hole=.3)]
     graphJSON = json.dumps(data, cls=plotly.utils.PlotlyJSONEncoder)
-    return render_template('brandanalysis.html', plot=graphJSON)
+
+    bass_brands_dict = bass_by_brands()
+    brands = []
+    brandscounts = []
+    for key,value in bass_brands_dict.items():
+        brands.append(key)
+        brandscounts.append(value)
+    data2 = [go.Bar(x=brands, y=brandscounts)]
+    graphJSON2 = json.dumps(data2, cls=plotly.utils.PlotlyJSONEncoder)
+
+    bass_price_dict = bass_by_price()
+    basses = []
+    prices = []
+    brandsfortag = []
+    for key,value in bass_price_dict.items():
+        basses.append(key)
+        prices.append(value[1])
+        brandsfortag.append(value[0])
+    data3 = [go.Scatter(x=basses, y=prices, mode='markers', hovertext=basses)]
+    graphJSON3 = json.dumps(data3, cls=plotly.utils.PlotlyJSONEncoder)
+
+    return render_template('brandanalysis.html', plot=graphJSON, plot2=graphJSON2, plot3=graphJSON3)
 
 
 def generate_query(keywords, basstype, lowestprice, highestprice, strings):
@@ -525,6 +575,22 @@ def return_results(keywords, basstype, lowestprice, highestprice, strings):
     return result_list
 
 
+def find_a_bass(bassname):
+    conn = sqlite3.connect('bassdb.sqlite')
+    cur = conn.cursor()
+    querybase = '''
+    SELECT ModelName, IFNULL(Brands.BrandName, OtherBrand), Price, Styles, Description, Features, PicURL, Basses.URL
+    FROM Basses
+    LEFT OUTER JOIN Brands 
+	ON Basses.Brand = Brands.BrandId
+    '''
+    query = querybase + 'WHERE ModelName = "' + bassname + '"'
+    results = cur.execute(query)
+    conn.commit()
+    result= list(results)[0]
+    return result
+
+
 def return_brands():
     conn = sqlite3.connect('bassdb.sqlite')
     cur = conn.cursor()
@@ -539,6 +605,7 @@ def return_brands():
         result_list.append(brands)
     return result_list
 
+
 def return_brand_countries():
     conn = sqlite3.connect('bassdb.sqlite')
     cur = conn.cursor()
@@ -551,6 +618,23 @@ def return_brand_countries():
     result_list=[]
     for country in results:
         result_list.append(country[0])
+    return dict.fromkeys(result_list)
+
+
+def return_bass_brands():
+    conn = sqlite3.connect('bassdb.sqlite')
+    cur = conn.cursor()
+    query = '''
+    SELECT DISTINCT IFNULL(Brands.BrandName, OtherBrand)
+    FROM Basses
+    LEFT OUTER JOIN Brands 
+        ON Basses.Brand = Brands.BrandId
+    '''
+    results = cur.execute(query)
+    conn.commit()
+    result_list=[]
+    for brand in results:
+        result_list.append(brand[0])
     return dict.fromkeys(result_list)
 
 
@@ -589,6 +673,38 @@ def brands_country_analysis():
     for blank in blanklist:
         del country_dict[blank]
     return country_dict
+
+
+def bass_by_brands():
+    allbasses = return_results("", "", "", "", "")
+    brand_dict = return_bass_brands()
+    for bass in allbasses:
+        if bass[1] in brand_dict.keys():
+            if brand_dict[bass[1]] is None:
+                brand_dict[bass[1]] = 0
+            else:
+                brand_dict[bass[1]] = brand_dict[bass[1]] + 1
+    blanklist = []
+    for key,value in brand_dict.items():
+        if value <= 5:
+            blanklist.append(key)
+    for blank in blanklist:
+        del brand_dict[blank]
+    brand_dict = sorted(brand_dict.items(), key=lambda kv: kv[1], reverse=True)
+    brand_dict = collections.OrderedDict(brand_dict)
+    print(brand_dict)
+    return brand_dict
+
+
+def bass_by_price():
+    allbasses = return_results("", "", "1", "", "")
+    bass_dict = {}
+    for bass in allbasses:
+        bass_dict[bass[0]] = [bass[1], bass[2]]
+    bass_dict = sorted(bass_dict.items(), key=lambda kv: kv[1][1])
+    bass_dict = collections.OrderedDict(bass_dict)
+    print(bass_dict)
+    return bass_dict
 
 
 if __name__ == "__main__":

@@ -12,23 +12,33 @@
 
 <body>
     <div class="container"></div>
-    <div class="bodybox">
-        <h1><a href="/">Bass Searcher</a> | Bass Brands</h1>
+    <div id="brandslist" class="bodybox">
+        <ul class="nav nav-tabs">
+            <li><a href="/"><h4>Bass Searcher</h4></a></li>
+            <li class="active"><a href="/brands"><h4>Bass Brands</h4></a></li>
+        </ul>
+        <div class="smallbox">
+            <br>
+        <h1>Bass Brands</h1>
         <a href="/brandanalysis" class="btn btn-info">See Analysis</a>
         <div class="resultsbox">
             {%for i in range(0, len)%}
-            <div class="bassbox">
-                <h2>{{Brands[i][0]}}</h2>
-                <h3>{{Brands[i][1]}}</h3>
-                <p>{{Brands[i][2]}}</p>
-                <a href={{Brands[i][3]}}>
-                    <div class="gobuy">
-                        <h4>Learn more</h4>
-                    </div>
-                </a>
+            <div class="row">
+                <div class="bassbox">
+                    <h2>{{Brands[i][0]}}</h2>
+                    {% if Brands[i][1] != None %}
+                    <h4>- {{Brands[i][1]}} - </h4>
+                    {% endif %}
+                    <br>
+                    <p>{{Brands[i][2]}}</p><br>
+                    <a class="btn btn-md btn-primary" href={{Brands[i][3]}} target="_blank">
+                            <h4>Learn more</h4>
+                    </a>
+                </div>
             </div>
             {%endfor%}
         </div>
+    </div>
     </div>
 </body>
 

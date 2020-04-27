@@ -10,18 +10,50 @@
     display: inline-block;
     width: 70%;
     margin: 10px;
-    border-radius: 10px;
     position: absolute;
     left: 50%;
     transform: translate(-50%, 0);
+}
+
+.mainbodybox{
+    text-align: center;
+    display: inline-block;
+    width: 70%;
+    margin: 10px;
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%, 0);
+    border-radius: 10px;
     padding: 1%;
-    background-color: #ffffff;
+    background-color: white;
     box-shadow: 40px 30px 50px #00607960;
+}
+
+.nav-tabs>li>a{
+    background-color: #e6e6e6;
+    border-top: 1px solid #bebebe;
+    border-right: 1px solid #bebebe;
+    border-left: 1px solid #bebebe;
+    border-radius: 10px 10px 0 0;
+}
+
+#brandslist{
+    width: 50%;
 }
 
 #mainpagesearching{
     top: 50%;
     transform: translate(-50%, -50%);
+}
+
+.smallbox{
+    border-bottom: 1px solid #d5d5d5;
+    border-right: 1px solid #d5d5d5;
+    border-left: 1px solid #d5d5d5;
+    border-radius: 10px;
+    padding: 1%;
+    background-color: white;
+    box-shadow: 40px 30px 50px #00607960;
 }
 
 .search{
@@ -50,6 +82,11 @@
     padding: 30px;
 }
 
+.brandsbox{
+    padding: 30px;
+    text-align: center;
+}
+
 .bassbox{
     background: #ececec;
     margin: 10px;
@@ -57,13 +94,32 @@
     border-radius: 10px;
     text-align: center;
 }
+.col-md-8{
+    text-align: left;
+}
 
 .description{
+    padding: 20px;
     text-align: left;
-    padding: 10px;
+}
+
+.descriptionContainer{
+    text-align: center;
+}
+
+.col-md-4{
+    text-align: center;
 }
 
 .bassimg{
     width: 200px;
     border: 1px solid #9c9c9c;
 }
+
+.price{
+    margin-top: 10px;
+}
+
+#graph3 .xaxislayer-above{
+    display: none;
+}    

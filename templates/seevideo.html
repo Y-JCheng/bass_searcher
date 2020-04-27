@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <meta charset="utf8" />
+    <title>Bass Searcher | {{bassdata[0]}}</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/style.css') }}">
+</head>
+
+<body>
+    <div class="container"></div>
+    <div class="bodybox">
+        <ul class="nav nav-tabs">
+            <li class="active"><a href="/"><h4>Bass Searcher</h4></a></li>
+            <li><a href="/brands"><h4>Bass Brands</h4></a></li>
+        </ul>
+        <div class="smallbox">
+        <h1>Bass Searcher</h1>
+        <h4>- Listen what it sounds like before buying it! -</h4>
+        <div class="resultsbox">
+                <h2>{{bassdata[0]}}</h2>
+                <h3>- {{bassdata[1]}} -</h3>
+                <br>
+                {% if youtubelink != None %}
+                <iframe width="1000" height="560" src="https://www.youtube.com/embed/{{youtubelink}}" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                {% else %}
+                <h4>Sorry, No video available</h4>
+                {% endif %}
+
+                <h3>Styles available: {{bassdata[3]}}</h3>
+                <div class="row">
+                <div class="col-md-2"></div>
+                <div id="description" class="col-md-8">
+                    <p class="description">{{bassdata[4]}}<br>
+                    {% if bassdata[5] != None %}
+                    <br><b>Features:</b> <br>{{bassdata[5]}}</p>
+                    {% endif %}
+                </div>
+            </div><br>
+                <div class="row">
+                    <div class="col-md-4"></div>
+                <div class="col-md-4">
+                    <a href={{bassdata[7]}} class="btn btn-warning  btn-block" target="_blank">
+                            <h3 class="price">Go get it!</h3>
+                            <h4 class="price">$ {{bassdata[2]}}</h4>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+</body>
+
+</html>

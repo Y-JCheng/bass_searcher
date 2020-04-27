@@ -15,17 +15,48 @@
 
 <body>
     <div class="container"></div>
-    <div class="bodybox">
-        <h1><a href="/">Bass Searcher</a> | <a href="/brands">Bass Brands</a></h1>
-        <h2>Industrial Overview</h2>
-            <div class="col-lg-12">
+    <div id="brandslist" class="bodybox">
+        <ul class="nav nav-tabs">
+            <li><a href="/"><h4>Bass Searcher</h4></a></li>
+            <li class="active"><a href="/brands"><h4>Bass Brands</h4></a></li>
+        </ul>
+        <div class="smallbox">
+            <br>
+        <h1>Bass Brands Analysis</h1>
+        <hr>
+        <div class="row">
+            <div class="col-lg-12 ">
+                <h4>Brands by Countries</h4>
                 <div class="chart" id="graph">
                     <script>
                         var graphs = {{plot | safe}};
                         Plotly.plot('graph',graphs,{});
                     </script>
                 </div>
+                <hr>
             </div>
+            <div class="col-lg-12 ">
+                <h4>Basses by Brands (for brands having more than 5 basses)</h4>
+                <div class="chart" id="graph2">
+                    <script>
+                        var graphs2 = {{plot2 | safe}};
+                        Plotly.plot('graph2',graphs2,{});
+                    </script>
+                </div>
+                <hr>
+            </div>
+            <div class="col-lg-12 ">
+                <h4>Basses by Price</h4>
+                <div class="chart" id="graph3">
+                    <script>
+                        var graphs3 = {{plot3 | safe}};
+                        Plotly.plot('graph3',graphs3,{});
+                    </script>
+                </div>
+                <hr>
+            </div>
+        </div>
+    </div>
     </div>
 </body>
 
